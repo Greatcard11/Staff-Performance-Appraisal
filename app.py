@@ -1,145 +1,162 @@
 import streamlit as st
 import pandas as pd
+import os
+import plotly.express as px
 
 # ======================================================
-# PAGE CONFIG
+# CONFIGURATION
 # ======================================================
-st.set_page_config(
-    page_title="Monthly Appraisal System",
-    layout="wide"
-)
+st.set_page_config(page_title="Staff Appraisal System", layout="wide")
 
 # ======================================================
-# STYLE
+# CUSTOM CSS (Orange, Black, White Theme)
 # ======================================================
 st.markdown("""
 <style>
-.stApp {
-    background-color: white;
-}
-
-h1, h2, h3 {
-    color: #1f2937;
-}
+    .main {
+        background-color: white;
+    }
+    h1, h2, h3 {
+        color: black;
+    }
+    .stApp {
+        background-color: white;
+    }
 </style>
 """, unsafe_allow_html=True)
 
-st.title("📊 Monthly Appraisal System")
-
-st.write("Upload employee KPI CSV file for automatic appraisal scoring.")
-
 # ======================================================
-# KPI TARGETS & WEIGHTS
+# TITLE
 # ======================================================
-kpi_targets = {
-    "Lead Generation": 100,
-    "Client Acquisition": 10,
-    "Revenue Growth": 5000000,
-    "Client Conversion": 30,
-    "Pipeline Management": 10000000,
-    "Proposal Success": 40,
-    "Client Retention": 90,
-    "Customer Relationship": 5,
-    "Business Expansion": 2,
-    "Reporting & Compliance": 100,
-    "Team Collaboration": 100,
-    "Professional Conduct": 100
-}
-
-kpi_weights = {
-    "Lead Generation": 10,
-    "Client Acquisition": 10,
-    "Revenue Growth": 15,
-    "Client Conversion": 10,
-    "Pipeline Management": 10,
-    "Proposal Success": 10,
-    "Client Retention": 10,
-    "Customer Relationship": 5,
-    "Business Expansion": 5,
-    "Reporting & Compliance": 5,
-    "Team Collaboration": 5,
-    "Professional Conduct": 5
-}
+st.title("Staff Performance Appraisal Dashboard")
 
 # ======================================================
-# FILE UPLOAD
+# PATH TO REPORTS
 # ======================================================
-uploaded_file = st.file_uploader(
-    "Upload CSV File",
-    type=["csv"]
+BASE_DIR = "reports"
+
+# ======================================================
+# GET MONTH FOLDERS
+# ======================================================
+month_folders = [f for f in os.listdir(BASE_DIR) if os.path.isdir(os.path.join(BASE_DIR, f))]
+selected_month = st.selectbox("Select Month", month_folders)
+
+month_path = os.path.join(BASE_DIR, selected_month)
+
+# ======================================================
+# GET FILES IN MONTH
+# ======================================================
+files = [f for f in os.listdir(month_path) if f.endswith(".csv")]
+selected_file = st.selectbox("Select Daily Report File", files)
+
+file_path = os.path.join(month_path, selected_file)
+
+# ======================================================
+# LOAD DATA
+# ======================================================
+df = pd.read_csv(file_path)
+
+# Normalize column names (safety)
+df.columns = df.columns.str.strip()
+
+# ======================================================
+# PERFORMANCE CALCULATION
+# ======================================================
+
+df["Task1_Score"] = df["Was Task 1 completed?"].apply(lambda x: 1 if str(x).lower() == "yes" else 0)
+df["Task2_Score"] = df["Was Task 2 completed?"].apply(lambda x: 1 if str(x).lower() == "yes" else 0)
+
+df["Daily_Score"] = (df["Task1_Score"] + df["Task2_Score"]) / 2 * 100
+
+# ======================================================
+# GROUP BY STAFF (MONTHLY VIEW)
+# ======================================================
+performance = df.groupby(["Name", "Department", "Designation"]).agg({
+    "Task1_Score": "mean",
+    "Task2_Score": "mean",
+    "Daily_Score": "mean"
+}).reset_index()
+
+performance["Performance %"] = performance["Daily_Score"]
+
+# ======================================================
+# RANKING
+# ======================================================
+performance = performance.sort_values(by="Performance %", ascending=False)
+performance["Rank"] = range(1, len(performance) + 1)
+
+top_performers = performance.head(5)
+low_performers = performance.tail(5)
+
+# ======================================================
+# DASHBOARD METRICS
+# ======================================================
+col1, col2, col3 = st.columns(3)
+
+col1.metric("Total Staff", len(performance))
+col2.metric("Top Performer Score", round(performance["Performance %"].max(), 2))
+col3.metric("Lowest Score", round(performance["Performance %"].min(), 2))
+
+# ======================================================
+# PIE CHART (Performance Distribution)
+# ======================================================
+st.subheader("Performance Distribution")
+
+performance["Performance Band"] = pd.cut(
+    performance["Performance %"],
+    bins=[0, 50, 75, 100],
+    labels=["Low", "Average", "High"]
 )
 
-if uploaded_file is not None:
+pie_data = performance["Performance Band"].value_counts().reset_index()
+pie_data.columns = ["Band", "Count"]
 
-    df = pd.read_csv(uploaded_file)
+fig_pie = px.pie(
+    pie_data,
+    names="Band",
+    values="Count",
+    color_discrete_sequence=["black", "orange", "#ffcc99"]
+)
 
-    # ==================================================
-    # SCORE CALCULATION
-    # ==================================================
-    total_scores = []
+st.plotly_chart(fig_pie, use_container_width=True)
 
-    for index, row in df.iterrows():
+# ======================================================
+# BAR CHART (Ranking)
+# ======================================================
+st.subheader("Staff Performance Ranking")
 
-        total_score = 0
+fig_bar = px.bar(
+    performance,
+    x="Name",
+    y="Performance %",
+    color="Performance %",
+    color_continuous_scale=["black", "orange", "white"],
+    text="Performance %"
+)
 
-        for kpi in kpi_targets.keys():
+st.plotly_chart(fig_bar, use_container_width=True)
 
-            actual = row[kpi]
-            target = kpi_targets[kpi]
-            weight = kpi_weights[kpi]
+# ======================================================
+# TOP & LOW PERFORMERS
+# ======================================================
+col1, col2 = st.columns(2)
 
-            achievement = (actual / target) * 100
+with col1:
+    st.subheader("🏆 Top Performers")
+    st.dataframe(top_performers, use_container_width=True)
 
-            # Maximum score cap = 100%
-            achievement = min(achievement, 100)
+with col2:
+    st.subheader("⚠️ Low Performers")
+    st.dataframe(low_performers, use_container_width=True)
 
-            weighted_score = (
-                achievement * weight
-            ) / 100
+# ======================================================
+# FULL TABLE
+# ======================================================
+st.subheader("Full Appraisal Table")
+st.dataframe(performance, use_container_width=True)
 
-            total_score += weighted_score
-
-        total_scores.append(round(total_score, 2))
-
-    df["Final Score (%)"] = total_scores
-
-    # ==================================================
-    # PERFORMANCE RATING
-    # ==================================================
-    def performance_rating(score):
-        if score >= 90:
-            return "Excellent"
-        elif score >= 75:
-            return "Very Good"
-        elif score >= 60:
-            return "Good"
-        elif score >= 50:
-            return "Average"
-        else:
-            return "Poor"
-
-    df["Performance Rating"] = df[
-        "Final Score (%)"
-    ].apply(performance_rating)
-
-    # ==================================================
-    # DISPLAY RESULTS
-    # ==================================================
-    st.subheader("Monthly Appraisal Results")
-
-    st.dataframe(
-        df,
-        use_container_width=True
-    )
-
-    # ==================================================
-    # DOWNLOAD RESULT
-    # ==================================================
-    csv = df.to_csv(index=False).encode("utf-8")
-
-    st.download_button(
-        label="📥 Download Appraisal Report",
-        data=csv,
-        file_name="monthly_appraisal_results.csv",
-        mime="text/csv"
-    )
+# ======================================================
+# CHALLENGES SUMMARY
+# ======================================================
+st.subheader("Daily Challenges Report")
+st.dataframe(df[["Name", "Challenges faced during the day"]])
