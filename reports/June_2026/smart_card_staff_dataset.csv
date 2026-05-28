@@ -5,7 +5,8 @@ Sola Salami,Contract,IT Support,Maintenance,Uche Balogun,Initialize card printin
 Zainab Sadiq,Contract,Card Engineer,Production,Chinedu Eze,Run chip encoding process,Yes,Resolve system errors,No,No major issues
 Aisha Salami,On Leave,Machine Operator,IT,Zainab Ogunleye,Run chip encoding process,Yes,Test chip functionality,Yes,Network downtime
 Emeka Olatunji,Contract,Machine Operator,IT,Sola Yakubu,Inspect printed cards for defects,Yes,Package finished smart cards,Yes,Low material supply
-Tunde Sadiq,Contract,Quality Analyst,Quality Control,Sola Eze,Design smart card layout,Yes,Package finished smart cards,Yes,No major issues
+Tunde Sadiq,Contract,Quality Analyst,Quality Control,Sola Eze,Design smart card layout,Yes,Package finished smart cards,Y
+Partially,No major issues
 Chinedu Balogun,On Leave,Production Supervisor,Quality Control,Tunde Balogun,Design smart card layout,No,Upload daily production report,Yes,No major issues
 Emeka Yakubu,Contract,Quality Analyst,Production,Tunde Nwankwo,Inspect printed cards for defects,No,Resolve system errors,Yes,Chip encoding errors
 Aisha Yakubu,Contract,Card Engineer,Logistics,Bola Okafor,Inspect printed cards for defects,Yes,Prepare materials for next batch,No,Machine overheating
