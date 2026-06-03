@@ -520,3 +520,74 @@ if "Challenges faced during the day" in df.columns:
         challenge_df,
         use_container_width=True
             )
+# ======================================================
+# STAFF WHO DID NOT SUBMIT REPORT
+# ======================================================
+st.subheader(
+    "Staff Who Did Not Submit Report"
+)
+
+try:
+
+    # Load employee master list
+    employee_df = pd.read_csv(
+        "employee.csv"
+    )
+
+    employee_df.columns = (
+        employee_df.columns.str.strip()
+    )
+
+    # All employees
+    all_staff = set(
+        employee_df["Name"]
+        .astype(str)
+        .str.strip()
+    )
+
+    # Staff that submitted report
+    submitted_staff = set(
+        df["Name"]
+        .astype(str)
+        .str.strip()
+    )
+
+    # Staff that did not submit
+    non_submitters = sorted(
+        list(
+            all_staff -
+            submitted_staff
+        )
+    )
+
+    st.metric(
+        "Total Non-Submitters",
+        len(non_submitters)
+    )
+
+    if len(non_submitters) > 0:
+
+        non_submitters_df = pd.DataFrame(
+            non_submitters,
+            columns=["Name"]
+        )
+
+        non_submitters_df.index = (
+            non_submitters_df.index + 1
+        )
+
+        st.dataframe(
+            non_submitters_df,
+            use_container_width=True
+        )
+
+    else:
+        st.success(
+            "All staff submitted their reports."
+        )
+
+except Exception as e:
+
+    st.error(
+        f"Unable to read employee.csv: {e}"
+    )
